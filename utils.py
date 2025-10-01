@@ -67,9 +67,44 @@ def read_data(path):
     raw.set_annotations(annotations)
     return raw
 
+def remap_events(raw):
+    # Estrai tutti gli eventi e ID
+    events, event_id = mne.events_from_annotations(raw, verbose=False)
+    annotations = raw.annotations
+
+    new_events = []
+    new_event_id = {"T_ON": 0, "NT_ON": 1}
+
+    current_block = []
+    target = None
+    all_targets = ["house", "tree", "face", "cat", "laptop", "boat", "auto", "banana", "icecream"]
+    for desc, onset, dur in zip(annotations.description, annotations.onset, annotations.duration):
+        if ("_ON" in desc) and any(t in desc for t in all_targets) and "stimuli" in desc:
+            # salva evento di stimolo
+            current_block.append((desc, onset))
+        elif desc.startswith("true"):
+            # chiuso un blocco: sappiamo chi è il target
+            if "\\" in desc:
+                target = desc.split("\\")[1].split(".")[0]
+            else:
+                target = desc.split("_")[1].split(".")[0]
+            for stim_desc, stim_onset in current_block:
+                stim_name = stim_desc.split("\\")[1].split(".")[0]
+                if stim_name == target:
+                    label = f"T_ON"
+                else:
+                    label = f"NT_ON"
+                new_events.append([int(stim_onset * raw.info["sfreq"]), 0, new_event_id[label]])
+            # reset blocco
+            current_block = []
+    return np.array(new_events), new_event_id
+
 def epoching(raw, tmin=0.0, tmax=0.8):
     events, event_id = mne.events_from_annotations(raw, verbose=False)
 
+    if any("true" in ev for ev in event_id):
+        events, event_id = remap_events(raw)
+    
     event_id_custom = {
         "T_ON": event_id["T_ON"],
         "NT_ON": event_id["NT_ON"],

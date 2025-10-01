@@ -105,7 +105,7 @@ def our_dataset():
     keep = occipital + frontal + parietal
 
     exclude = [ch for ch in all_channels if ch not in keep]
-    X, y, files = load_all_recordings(root, pattern="sub-*/ses-*/eeg/*.xdf", exclude_ses=["ses-S001"], tmin=-0.2, tmax=0.6, drop_channels=exclude)
+    X, y, files = load_all_recordings(root, pattern="sub-P001/ses-*/eeg/*.xdf", exclude_ses=["ses-S001"], tmin=-0.2, tmax=0.6, drop_channels=exclude)
     # balance classes
     label_one = np.where(y == 0)[0]
     label_two = np.where(y == 1)[0]
@@ -187,9 +187,14 @@ def concatenate_datasets(dat_fun1, dat_fun2, indices_erp, indices_ours):
 
 
 X, y = our_dataset()
+# store the dataset in a npy file
+# np.save("our_dataset.npy", X)
+# np.save("our_labels.npy", y)
+
 print("Class distribution: 0 count =", np.sum(y==0), ", 1 count =", np.sum(y==1))
 X, y = balance_classes(X, y)
 loop(X, y)
+exit()
 res = input("Press any key if you want to continue with the training on the whole dataset and store the model, or type 'exit' to quit: ")
 if res.lower() == 'exit':
     exit()
